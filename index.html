@@ -1,0 +1,345 @@
+import React, { useState, useEffect } from 'react';
+import { Trophy, Edit, Save, Trash2, Medal, Users } from 'lucide-react';
+
+// Definición de equipos y estructura inicial (Actualizado con nueva asignación)
+const INITIAL_TEAMS = [
+    { id: '5', name: 'Grado 5°', country: 'República de Corea', flag: '🇰🇷', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '6a', name: 'Grado 6A', country: 'Jordania', flag: '🇯🇴', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '6b', name: 'Grado 6B', country: 'Irán', flag: '🇮🇷', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '7a', name: 'Grado 7A', country: 'Suiza', flag: '🇨🇭', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '7b', name: 'Grado 7B', country: 'Escocia', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '7c', name: 'Grado 7C', country: 'España', flag: '🇪🇸', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '8a', name: 'Grado 8A', country: 'Panamá', flag: '🇵🇦', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '8b', name: 'Grado 8B', country: 'Argentina', flag: '🇦🇷', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '9', name: 'Grado 9°', country: 'Túnez', flag: '🇹🇳', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '10a', name: 'Grado 10A', country: 'Bélgica', flag: '🇧🇪', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '10b', name: 'Grado 10B', country: 'Paraguay', flag: '🇵🇾', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: '11', name: 'Grado 11°', country: 'Org. / Sede', flag: '🏳️', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+    { id: 'profs', name: 'Profesores', country: 'Uruguay', flag: '🇺🇾', sportPoints: 0, fairPlay: 0, cheer: 0, culture: 0, total: 0 },
+];
+
+export default function App() {
+    const [teams, setTeams] = useState(() => {
+        // Intentar recuperar datos guardados (simulado para este entorno)
+        try {
+            const saved = localStorage.getItem('lnc_mundial_2026_data');
+            // Si hay datos guardados, necesitamos asegurarnos de que los nombres de los países se actualicen
+            // si solo cambiamos el código pero el ID sigue igual.
+            // Para simplicidad en este caso, si los IDs coinciden, actualizamos la info estática (nombre, bandera)
+            // pero mantenemos los puntos.
+            if (saved) {
+                const parsedSaved = JSON.parse(saved);
+                return INITIAL_TEAMS.map(initialTeam => {
+                    const savedTeam = parsedSaved.find(t => t.id === initialTeam.id);
+                    if (savedTeam) {
+                        return {
+                            ...initialTeam, // Usar nombre/bandera nuevos
+                            sportPoints: savedTeam.sportPoints, // Mantener puntos guardados
+                            fairPlay: savedTeam.fairPlay,
+                            cheer: savedTeam.cheer,
+                            culture: savedTeam.culture,
+                            total: savedTeam.total
+                        };
+                    }
+                    return initialTeam;
+                });
+            }
+            return INITIAL_TEAMS;
+        } catch (e) {
+            return INITIAL_TEAMS;
+        }
+    });
+    const [view, setView] = useState('ranking'); // ranking, admin
+    const [selectedTeamId, setSelectedTeamId] = useState(null);
+    
+    // Estado para el formulario de edición
+    const [editForm, setEditForm] = useState({
+        sportPoints: 0,
+        fairPlay: 0,
+        cheer: 0,
+        culture: 0
+    });
+
+    // Ordenar equipos por puntaje total
+    const sortedTeams = [...teams].sort((a, b) => b.total - a.total);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('lnc_mundial_2026_data', JSON.stringify(teams));
+        } catch (e) {
+            console.warn("No se pudo guardar en localStorage en este entorno sandbox.");
+        }
+    }, [teams]);
+
+    const handleUpdateScore = (teamId, field, value) => {
+        // Modo rápido: sumar valor a un campo existente
+        setTeams(prevTeams => prevTeams.map(team => {
+            if (team.id === teamId) {
+                const newPoints = parseInt(value);
+                const updatedTeam = { ...team, [field]: team[field] + newPoints };
+                // Recalcular total
+                updatedTeam.total = updatedTeam.sportPoints + updatedTeam.fairPlay + updatedTeam.cheer + updatedTeam.culture;
+                return updatedTeam;
+            }
+            return team;
+        }));
+    };
+
+    const handleManualEdit = (e) => {
+        // Modo edición manual precisa
+        e.preventDefault();
+        setTeams(prevTeams => prevTeams.map(team => {
+            if (team.id === selectedTeamId) {
+                return {
+                    ...team,
+                    sportPoints: parseInt(editForm.sportPoints),
+                    fairPlay: parseInt(editForm.fairPlay),
+                    cheer: parseInt(editForm.cheer),
+                    culture: parseInt(editForm.culture),
+                    total: parseInt(editForm.sportPoints) + parseInt(editForm.fairPlay) + parseInt(editForm.cheer) + parseInt(editForm.culture)
+                };
+            }
+            return team;
+        }));
+        setView('ranking');
+    };
+
+    const openAdmin = (team) => {
+        setSelectedTeamId(team.id);
+        setEditForm({
+            sportPoints: team.sportPoints,
+            fairPlay: team.fairPlay,
+            cheer: team.cheer,
+            culture: team.culture
+        });
+        setView('admin');
+    };
+
+    const resetData = () => {
+        // Usamos window.confirm de forma segura
+        const isConfirmed = window.confirm('¿Estás seguro de reiniciar TODOS los puntos a cero?');
+        if(isConfirmed) {
+            setTeams(INITIAL_TEAMS);
+        }
+    };
+
+    return (
+        <div className="min-h-screen pb-12 bg-slate-50 font-sans text-slate-900">
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.5s ease-out;
+                }
+                .card-hover:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                }
+            `}</style>
+
+            {/* Header */}
+            <header className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white p-6 shadow-lg">
+                <div className="max-w-4xl mx-auto flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Mundial LNC 2026</h1>
+                        <p className="text-blue-200 text-sm mt-1">Institución Educativa Luis Nelson Cuellar</p>
+                    </div>
+                    <div className="text-right hidden sm:block">
+                        <span className="block font-bold text-xl">🏆 Juegos Interclases</span>
+                        <span className="text-xs bg-blue-700 px-2 py-1 rounded">Inzá, Cauca</span>
+                    </div>
+                </div>
+            </header>
+
+            {/* Navigation Tabs */}
+            <div className="max-w-4xl mx-auto mt-6 px-4 flex gap-4">
+                <button 
+                    onClick={() => setView('ranking')}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-full font-semibold transition-all ${view === 'ranking' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                >
+                    <Trophy size={18} /> Tabla de Posiciones
+                </button>
+                <button 
+                    onClick={() => { setSelectedTeamId(teams[0].id); openAdmin(teams[0]); }}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-full font-semibold transition-all ${view === 'admin' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                >
+                    <Edit size={18} /> Gestionar Puntos
+                </button>
+            </div>
+
+            {/* Content */}
+            <main className="max-w-4xl mx-auto mt-8 px-4">
+                
+                {/* VISTA RANKING */}
+                {view === 'ranking' && (
+                    <div className="space-y-4 animate-fade-in">
+                        <div className="bg-white rounded-xl shadow-sm p-4 border border-blue-100 mb-6">
+                            <h2 className="text-lg font-bold text-gray-800 mb-2">Resumen General</h2>
+                            <p className="text-gray-600 text-sm">Los puntos se actualizan en tiempo real. El grado campeón será quien acumule más puntos en todas las categorías.</p>
+                        </div>
+
+                        {sortedTeams.map((team, index) => (
+                            <div key={team.id} className="group bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex items-center justify-between transition-all card-hover relative overflow-hidden">
+                                
+                                {/* Barra de progreso de fondo sutil */}
+                                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-green-400 transition-all duration-1000" style={{width: `${(team.total / (sortedTeams[0].total || 1)) * 100}%`}}></div>
+                                
+                                <div className="flex items-center gap-4 z-10">
+                                    <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-xl ${index === 0 ? 'bg-yellow-100 text-yellow-700 ring-4 ring-yellow-50' : index === 1 ? 'bg-gray-100 text-gray-600' : index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-800'}`}>
+                                        {index + 1}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                                            {team.name} <span className="text-2xl" title={team.country}>{team.flag}</span>
+                                        </h3>
+                                        <p className="text-sm text-gray-500 font-medium">{team.country}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-6 z-10">
+                                    <div className="hidden md:flex gap-4 text-xs text-gray-400">
+                                        <div className="text-center"><span className="block font-bold text-gray-600">{team.sportPoints}</span>Dep</div>
+                                        <div className="text-center"><span className="block font-bold text-gray-600">{team.fairPlay}</span>FP</div>
+                                        <div className="text-center"><span className="block font-bold text-gray-600">{team.culture}</span>Cul</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block text-3xl font-black text-indigo-900">{team.total}</span>
+                                        <span className="text-xs text-indigo-500 uppercase font-bold tracking-wider">Puntos</span>
+                                    </div>
+                                    <button 
+                                        onClick={() => openAdmin(team)}
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                        title="Editar Puntos"
+                                    >
+                                        <Edit size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* VISTA ADMIN */}
+                {view === 'admin' && (
+                    <div className="animate-fade-in">
+                        <div className="bg-white rounded-2xl shadow-lg border border-indigo-100 overflow-hidden">
+                            <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center flex-wrap gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Seleccionar Equipo</label>
+                                    <select 
+                                        className="block w-full min-w-[200px] px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        value={selectedTeamId}
+                                        onChange={(e) => {
+                                            const t = teams.find(team => team.id === e.target.value);
+                                            openAdmin(t);
+                                        }}
+                                    >
+                                        {teams.map(t => (
+                                            <option key={t.id} value={t.id}>{t.flag} {t.name} ({t.country})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm text-gray-500">Puntaje Actual Total</p>
+                                    <p className="text-3xl font-black text-indigo-900">{teams.find(t=>t.id===selectedTeamId)?.total}</p>
+                                </div>
+                            </div>
+
+                            {/* Botones de Acción Rápida */}
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-indigo-50/50">
+                                <div className="col-span-full mb-2">
+                                    <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                                        ⚡ Acciones Rápidas (Sumar Puntos)
+                                    </h3>
+                                </div>
+                                <button onClick={() => handleUpdateScore(selectedTeamId, 'sportPoints', 100)} className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg text-sm font-bold shadow transition-transform active:scale-95">
+                                    🥇 Ganador (+100)
+                                </button>
+                                <button onClick={() => handleUpdateScore(selectedTeamId, 'sportPoints', 70)} className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg text-sm font-bold shadow transition-transform active:scale-95">
+                                    🥈 Segundo (+70)
+                                </button>
+                                <button onClick={() => handleUpdateScore(selectedTeamId, 'fairPlay', 20)} className="bg-teal-500 hover:bg-teal-600 text-white p-3 rounded-lg text-sm font-bold shadow transition-transform active:scale-95">
+                                    🤝 Fair Play (+20)
+                                </button>
+                                <button onClick={() => handleUpdateScore(selectedTeamId, 'cheer', 15)} className="bg-purple-500 hover:bg-purple-600 text-white p-3 rounded-lg text-sm font-bold shadow transition-transform active:scale-95">
+                                    📣 Barra/Anim (+15)
+                                </button>
+                                <button onClick={() => handleUpdateScore(selectedTeamId, 'sportPoints', 20)} className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg text-sm font-bold shadow transition-transform active:scale-95">
+                                    ⚽ Participación (+20)
+                                </button>
+                                <button onClick={() => handleUpdateScore(selectedTeamId, 'culture', 10)} className="bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-lg text-sm font-bold shadow transition-transform active:scale-95">
+                                    🎨 Cultural (+10)
+                                </button>
+                            </div>
+
+                            {/* Formulario de Edición Manual */}
+                            <form onSubmit={handleManualEdit} className="p-6 border-t border-gray-100">
+                                <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                    <Edit size={16}/> Edición Manual de Acumulados
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Deportivos</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none font-mono font-bold"
+                                            value={editForm.sportPoints}
+                                            onChange={e => setEditForm({...editForm, sportPoints: e.target.value})}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Juego Limpio</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none font-mono font-bold"
+                                            value={editForm.fairPlay}
+                                            onChange={e => setEditForm({...editForm, fairPlay: e.target.value})}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Barra/Puntualidad</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none font-mono font-bold"
+                                            value={editForm.cheer}
+                                            onChange={e => setEditForm({...editForm, cheer: e.target.value})}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Cultural/Stand</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none font-mono font-bold"
+                                            value={editForm.culture}
+                                            onChange={e => setEditForm({...editForm, culture: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-6 flex justify-between items-center">
+                                    <p className="text-xs text-gray-400 italic">Los cambios se guardan automáticamente en este dispositivo.</p>
+                                    <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                                        <Save size={18} /> Guardar Cambios
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </main>
+
+            {/* Footer / Reset Zone */}
+            <footer className="max-w-4xl mx-auto mt-12 px-4 text-center pb-8 border-t border-gray-200 pt-8">
+                <p className="text-gray-500 text-sm mb-4">© 2026 Comité Organizador Grado 11 - IE Luis Nelson Cuellar</p>
+                <button 
+                    onClick={resetData}
+                    className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1 mx-auto transition-colors"
+                >
+                    <Trash2 size={12}/> Reiniciar Torneo (Borrar Datos)
+                </button>
+            </footer>
+        </div>
+    );
+}
